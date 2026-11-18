@@ -4,5 +4,5 @@ compatibility_date = "2026-11-01"
 
 [vars]
 # Puedes dejar una lista genérica o vacía aquí, y definir las reales en el panel de Cloudflare
-ALLOWED_IPS = "" 
+ALLOWED_IPS = "45.173.197.254" 
 CACHE_TTL = "1800"
