@@ -101,9 +101,6 @@ function matchCIDRv6(ip, cidr) {
   return (ipBin >> shift) === (rangeBin >> shift);
 }
 
-/**
- * Parser ultra-flexible: busca nodos de contacto sin importar mayúsculas, minúsculas o nombres de etiquetas
- */
 function parseAndSortContacts(xmlText) {
   const parser = new XMLParser({
     ignoreAttributes: false,
@@ -113,7 +110,6 @@ function parseAndSortContacts(xmlText) {
   const parsed = parser.parse(xmlText);
   let rawContacts = [];
 
-  // Función recursiva para encontrar cualquier lista de elementos que parezcan contactos
   function findContactsRecursive(obj) {
     if (!obj || typeof obj !== "object") return;
     for (const key of Object.keys(obj)) {
@@ -136,12 +132,10 @@ function parseAndSortContacts(xmlText) {
 
   const contacts = rawContacts
     .map((c) => {
-      // Extraer nombre de cualquier variante de etiqueta
       const rawName = String(c.FirstName || c.firstname || c.Name || c.name || "").trim();
       const rawLast = String(c.LastName || c.lastname || c.SurName || "").trim();
       const fullName = rawLast ? `${rawName} ${rawLast}`.trim() : rawName;
 
-      // Extraer número de teléfono/extensión de cualquier variante
       let extension = "";
       const phoneNode = c.Phone || c.phone || c.Telephone || c.telephone || c.Number || c.number;
       
@@ -156,7 +150,6 @@ function parseAndSortContacts(xmlText) {
 
       if (!fullName || !extension) return null;
 
-      // 1. Detectar Colas de Llamadas (Q ...)
       if (/^Q\s+/i.test(fullName)) {
         const cleanQueueName = fullName.replace(/^Q\s+/i, "").trim();
         return {
@@ -451,4 +444,67 @@ function renderApp(contacts) {
           </div>\`;
       } else {
         resultsContainer.innerHTML = \`
-          <div class="grid grid-cols-1
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            \${filtered.map((c) => {
+              const badgeStyle = c.isQueue
+                ? "bg-amber-100 text-amber-800 border-amber-200"
+                : c.location === "General"
+                  ? "bg-slate-100 text-slate-600 border-slate-200"
+                  : "bg-indigo-50 text-indigo-700 border-indigo-200";
+
+              const cardBorder = c.isQueue ? "border-amber-200/80 bg-amber-50/30" : "border-slate-200 bg-white";
+
+              return \`
+                <div class="\${cardBorder} rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3">
+                  <div>
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                      <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md border \${badgeStyle}">
+                        \${c.isQueue ? "★ Cola Principal" : escapeClient(c.location)}
+                      </span>
+                      <span class="text-xs text-slate-400 font-medium">\${escapeClient(c.department)}</span>
+                    </div>
+                    <h2 class="font-bold text-slate-900 text-base leading-snug">\${escapeClient(c.name)}</h2>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span class="font-mono text-xs text-slate-500">Ext: <strong class="text-slate-800">\${escapeClient(c.extension)}</strong></span>
+                    <div class="flex items-center gap-2">
+                      <a href="tel:\${escapeClient(c.extension)}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition-colors">
+                        Llamar
+                      </a>
+                      <button onclick="copyExt('\${escapeClient(c.extension)}')" title="Copiar extensión" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                </div>\`;
+            }).join("")}
+          </div>\`;
+      }
+    }
+
+    function escapeClient(str) {
+      return String(str)
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        .replace(/"/g, '"');
+    }
+
+    searchInput.addEventListener("input", renderList);
+    locationFilter.addEventListener("change", renderList);
+    deptFilter.addEventListener("change", renderList);
+    clearSearch.addEventListener("click", () => {
+      searchInput.value = "";
+      renderList();
+      searchInput.focus();
+    });
+
+    searchInput.value = "";
+    locationFilter.value = "";
+    deptFilter.value = "";
+    renderList();
+  </script>
+</body>
+</html>`;
+}
