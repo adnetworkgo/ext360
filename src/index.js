@@ -205,7 +205,7 @@ function escapeHTML(str) {
     .replace(/&/g, "&")
     .replace(/</g, "<")
     .replace(/>/g, ">")
-    .replace(/"/g, """);
+    .replace(/"/g, '"');
 }
 
 function renderAccessDenied(clientIP) {
