@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 
 const XML_SOURCE_URL = "https://360net-publico.s3.amazonaws.com/phonebook.xml";
-const LOGO_URL = ""; // Opcional: Coloca aquí la URL directa de tu logo PNG (ej: "https://tusitio.com/logo.png")
+const LOGO_URL = ""; // Opcional: Coloca aquí la URL directa de tu logo PNG
 
 export default {
   async fetch(request, env, ctx) {
@@ -135,7 +135,7 @@ function parseAndSortContacts(xmlText) {
     .map((c) => {
       const rawName = String(c.FirstName || c.firstname || c.Name || c.name || "").trim();
       const rawLast = String(c.LastName || c.lastname || c.SurName || "").trim();
-      const fullName = rawLast ? `${rawName}${rawLast}`.trim() : rawName;
+      const fullName = rawLast ? `${rawName} ${rawLast}`.trim() : rawName;
 
       let extension = "";
       const phoneNode = c.Phone || c.phone || c.Telephone || c.telephone || c.Number || c.number;
@@ -169,7 +169,7 @@ function parseAndSortContacts(xmlText) {
       let department = "General";
 
       if (parts.length >= 3) {
-        personName = `${parts[0]}${parts[1]}`;
+        personName = `${parts[0]} ${parts[1]}`;
         const thirdTerm = parts[2];
         const restOfText = parts.slice(3).join(" ");
 
@@ -270,13 +270,7 @@ function renderApp(contacts) {
     <div class="max-w-4xl mx-auto px-4 py-3.5 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-11 h-11 bg-blue-600/30 rounded-xl flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
-          ${
-            logoUrlClean
-              ? `<img src="${logoUrlClean}" alt="Logo" class="w-full h-full object-contain" />`
-              : `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                </svg>`
-          }
+          ${logoUrlClean ? `<img src="${logoUrlClean}" alt="Logo" class="w-full h-full object-contain" />` : `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`}
         </div>
         <div>
           <h1 class="font-bold text-base sm:text-lg leading-tight text-white">Directorio Telefónico Corporativo</h1>
@@ -467,4 +461,53 @@ function renderApp(contacts) {
                       <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-md border \${badgeStyle}">
                         \${c.isQueue ? "★ Cola Principal" : escapeClient(c.location)}
                       </span>
-                      <span class="text-xs text-slate-
+                      <span class="text-xs text-slate-500 font-medium truncate max-w-[200px]">\${escapeClient(c.department)}</span>
+                    </div>
+                    <h2 class="font-extrabold text-slate-900 text-lg sm:text-xl leading-snug">\${escapeClient(c.name)}</h2>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <div class="flex items-baseline gap-1.5">
+                      <span class="text-xs font-medium text-slate-400 uppercase">Ext:</span>
+                      <span class="font-mono font-extrabold text-blue-600 text-lg sm:text-xl">\${escapeClient(c.extension)}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <a href="tel:\${escapeClient(c.extension)}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl transition-colors shadow-sm">
+                        📞 Llamar
+                      </a>
+                      <button onclick="copyExt('\${escapeClient(c.extension)}')" title="Copiar extensión" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                </div>\`;
+            }).join("")}
+          </div>\`;
+      }
+    }
+
+    function escapeClient(str) {
+      return String(str)
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        .replace(/"/g, '"');
+    }
+
+    searchInput.addEventListener("input", renderList);
+    locationFilter.addEventListener("change", renderList);
+    deptFilter.addEventListener("change", renderList);
+    clearSearch.addEventListener("click", () => {
+      searchInput.value = "";
+      renderList();
+      searchInput.focus();
+    });
+
+    searchInput.value = "";
+    locationFilter.value = "";
+    deptFilter.value = "";
+    renderList();
+  </script>
+</body>
+</html>`;
+}
