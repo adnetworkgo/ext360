@@ -4,7 +4,6 @@ const XML_SOURCE_URL = "https://360net-publico.s3.amazonaws.com/phonebook.xml";
 
 export default {
   async fetch(request, env, ctx) {
-    // 1. Validación de IP (Soporte IPv4, IPv6 y CIDR)
     const clientIP = (request.headers.get("CF-Connecting-IP") || "").trim();
     const allowedRaw = env.ALLOWED_IPS || "";
     const allowedList = allowedRaw
@@ -19,7 +18,6 @@ export default {
       });
     }
 
-    // 2. Gestión de Caché en el Borde
     const cacheTTL = parseInt(env.CACHE_TTL || "1800", 10);
     const cache = caches.default;
     const cacheKey = new Request(XML_SOURCE_URL, { method: "GET" });
@@ -104,7 +102,7 @@ function matchCIDRv6(ip, cidr) {
 }
 
 /**
- * Parser robusto: detecta automáticamente cualquier etiqueta raíz del XML
+ * Parser ultra-flexible: busca nodos de contacto sin importar mayúsculas, minúsculas o nombres de etiquetas
  */
 function parseAndSortContacts(xmlText) {
   const parser = new XMLParser({
@@ -115,31 +113,45 @@ function parseAndSortContacts(xmlText) {
   const parsed = parser.parse(xmlText);
   let rawContacts = [];
 
-  if (parsed) {
-    const rootKey = Object.keys(parsed)[0];
-    if (rootKey && parsed[rootKey]) {
-      rawContacts = parsed[rootKey].Contact || parsed[rootKey].contact || [];
+  // Función recursiva para encontrar cualquier lista de elementos que parezcan contactos
+  function findContactsRecursive(obj) {
+    if (!obj || typeof obj !== "object") return;
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (key.toLowerCase() === "contact" || key.toLowerCase() === "entry") {
+        if (Array.isArray(val)) {
+          rawContacts.push(...val);
+        } else {
+          rawContacts.push(val);
+        }
+      } else if (typeof val === "object") {
+        findContactsRecursive(val);
+      }
     }
   }
 
-  if (!Array.isArray(rawContacts)) {
-    rawContacts = [rawContacts];
-  }
+  findContactsRecursive(parsed);
 
   const knownLocations = ["calabozo", "cagua", "maracay", "guarico", "barbacoa", "valle", "pascua", "socorro", "mercedes"];
 
   const contacts = rawContacts
     .map((c) => {
-      const rawName = String(c.FirstName || c.firstname || "").trim();
-      const rawLast = String(c.LastName || c.lastname || "").trim();
+      // Extraer nombre de cualquier variante de etiqueta
+      const rawName = String(c.FirstName || c.firstname || c.Name || c.name || "").trim();
+      const rawLast = String(c.LastName || c.lastname || c.SurName || "").trim();
       const fullName = rawLast ? `${rawName} ${rawLast}`.trim() : rawName;
 
-      let phoneNode = c.Phone || c.phone;
+      // Extraer número de teléfono/extensión de cualquier variante
       let extension = "";
-      if (Array.isArray(phoneNode)) {
-        extension = String(phoneNode[0]?.phonenumber || phoneNode[0]?.number || "").trim();
-      } else if (phoneNode) {
-        extension = String(phoneNode.phonenumber || phoneNode.number || "").trim();
+      const phoneNode = c.Phone || c.phone || c.Telephone || c.telephone || c.Number || c.number;
+      
+      if (typeof phoneNode === "string" || typeof phoneNode === "number") {
+        extension = String(phoneNode).trim();
+      } else if (Array.isArray(phoneNode)) {
+        const pObj = phoneNode[0];
+        extension = String(pObj?.phonenumber || pObj?.number || pObj?._ || pObj || "").trim();
+      } else if (phoneNode && typeof phoneNode === "object") {
+        extension = String(phoneNode.phonenumber || phoneNode.number || phoneNode._ || "").trim();
       }
 
       if (!fullName || !extension) return null;
@@ -284,7 +296,6 @@ function renderApp(contacts) {
   </header>
 
   <main class="max-w-4xl mx-auto px-4 py-6">
-    <!-- Panel de búsqueda y filtros -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-6 space-y-3">
       <div class="relative">
         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
@@ -322,11 +333,9 @@ function renderApp(contacts) {
       </div>
     </div>
 
-    <!-- Listado de resultados -->
     <div id="resultsContainer"></div>
   </main>
 
-  <!-- Toast de copiado -->
   <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity duration-200">
     Extensión copiada al portapapeles
   </div>
@@ -442,68 +451,4 @@ function renderApp(contacts) {
           </div>\`;
       } else {
         resultsContainer.innerHTML = \`
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            \${filtered.map((c) => {
-              const badgeStyle = c.isQueue
-                ? "bg-amber-100 text-amber-800 border-amber-200"
-                : c.location === "General"
-                  ? "bg-slate-100 text-slate-600 border-slate-200"
-                  : "bg-indigo-50 text-indigo-700 border-indigo-200";
-
-              const cardBorder = c.isQueue ? "border-amber-200/80 bg-amber-50/30" : "border-slate-200 bg-white";
-
-              return \`
-                <div class="\${cardBorder} rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3">
-                  <div>
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                      <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md border \${badgeStyle}">
-                        \${c.isQueue ? "★ Cola Principal" : escapeClient(c.location)}
-                      </span>
-                      <span class="text-xs text-slate-400 font-medium">\${escapeClient(c.department)}</span>
-                    </div>
-                    <h2 class="font-bold text-slate-900 text-base leading-snug">\${escapeClient(c.name)}</h2>
-                  </div>
-
-                  <div class="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <span class="font-mono text-xs text-slate-500">Ext: <strong class="text-slate-800">\${escapeClient(c.extension)}</strong></span>
-                    <div class="flex items-center gap-2">
-                      <a href="tel:\${escapeClient(c.extension)}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition-colors">
-                        Llamar
-                      </a>
-                      <button onclick="copyExt('\${escapeClient(c.extension)}')" title="Copiar extensión" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">
-                        📋
-                      </button>
-                    </div>
-                  </div>
-                </div>\`;
-            }).join("")}
-          </div>\`;
-      }
-    }
-
-    function escapeClient(str) {
-      return String(str)
-        .replace(/&/g, "&")
-        .replace(/</g, "<")
-        .replace(/>/g, ">")
-        .replace(/"/g, '"');
-    }
-
-    searchInput.addEventListener("input", renderList);
-    locationFilter.addEventListener("change", renderList);
-    deptFilter.addEventListener("change", renderList);
-    clearSearch.addEventListener("click", () => {
-      searchInput.value = "";
-      renderList();
-      searchInput.focus();
-    });
-
-    // Inicializar vacíos y renderizar
-    searchInput.value = "";
-    locationFilter.value = "";
-    deptFilter.value = "";
-    renderList();
-  </script>
-</body>
-</html>`;
-}
+          <div class="grid grid-cols-1
