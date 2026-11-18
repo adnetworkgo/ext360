@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 
 const XML_SOURCE_URL = "https://360net-publico.s3.amazonaws.com/phonebook.xml";
+const LOGO_URL = ""; // Opcional: Coloca aquí la URL directa de tu logo PNG (ej: "https://tusitio.com/logo.png")
 
 export default {
   async fetch(request, env, ctx) {
@@ -134,7 +135,7 @@ function parseAndSortContacts(xmlText) {
     .map((c) => {
       const rawName = String(c.FirstName || c.firstname || c.Name || c.name || "").trim();
       const rawLast = String(c.LastName || c.lastname || c.SurName || "").trim();
-      const fullName = rawLast ? `${rawName} ${rawLast}`.trim() : rawName;
+      const fullName = rawLast ? `${rawName}${rawLast}`.trim() : rawName;
 
       let extension = "";
       const phoneNode = c.Phone || c.phone || c.Telephone || c.telephone || c.Number || c.number;
@@ -168,7 +169,7 @@ function parseAndSortContacts(xmlText) {
       let department = "General";
 
       if (parts.length >= 3) {
-        personName = `${parts[0]} ${parts[1]}`;
+        personName = `${parts[0]}${parts[1]}`;
         const thirdTerm = parts[2];
         const restOfText = parts.slice(3).join(" ");
 
@@ -254,6 +255,7 @@ function renderApp(contacts) {
   });
 
   const contactsJSON = JSON.stringify(contacts).replace(/</g, "\\u003c");
+  const logoUrlClean = escapeHTML(LOGO_URL);
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -264,24 +266,28 @@ function renderApp(contacts) {
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
-  <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-20">
-    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+  <header class="text-white shadow-lg sticky top-0 z-20" style="background-color: #001457; border-bottom: 2px solid #00C600;">
+    <div class="max-w-4xl mx-auto px-4 py-3.5 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-inner">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-          </svg>
+        <div class="w-11 h-11 bg-blue-600/30 rounded-xl flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
+          ${
+            logoUrlClean
+              ? `<img src="${logoUrlClean}" alt="Logo" class="w-full h-full object-contain" />`
+              : `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                </svg>`
+          }
         </div>
         <div>
-          <h1 class="font-bold text-lg leading-tight">Directorio Telefónico Corporativo</h1>
-          <p class="text-xs text-slate-400">Red interna verificada • Acceso seguro</p>
+          <h1 class="font-bold text-base sm:text-lg leading-tight text-white">Directorio Telefónico Corporativo</h1>
+          <p class="text-[11px] text-slate-300">Red interna verificada • Acceso seguro</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button id="viewToggleBtn" onclick="toggleViewMode()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5">
-          <span id="viewIcon">📋</span> <span id="viewText">Vista Minimalista</span>
+        <button id="viewToggleBtn" onclick="toggleViewMode()" class="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-2 rounded-xl border border-white/15 transition-colors flex items-center gap-1.5 shadow-sm">
+          <span id="viewIcon">📋</span> <span id="viewText" class="hidden sm:inline">Vista Minimalista</span>
         </button>
-        <span id="counterBadge" class="text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full hidden sm:inline-block">
+        <span id="counterBadge" class="text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-full">
           ${contacts.length} ext
         </span>
       </div>
@@ -300,9 +306,9 @@ function renderApp(contacts) {
           id="searchInput"
           type="text"
           placeholder="Buscar por extensión, nombre, ubicación o departamento..."
-          class="w-full pl-11 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          class="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
-        <button id="clearSearch" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+        <button id="clearSearch" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-lg font-bold">
           ✕
         </button>
       </div>
@@ -310,7 +316,7 @@ function renderApp(contacts) {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Ubicación / Sede</label>
-          <select id="locationFilter" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="locationFilter" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">Todas las ubicaciones (${locations.length})</option>
             ${locations.map((loc) => `<option value="${escapeHTML(loc)}">${escapeHTML(loc === "Principales" ? "★ Extensiones Principales" : loc)}</option>`).join("")}
           </select>
@@ -318,7 +324,7 @@ function renderApp(contacts) {
 
         <div>
           <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Departamento / Área</label>
-          <select id="deptFilter" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="deptFilter" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">Todos los departamentos (${departments.length})</option>
             ${departments.map((dept) => `<option value="${escapeHTML(dept)}">${escapeHTML(dept)}</option>`).join("")}
           </select>
@@ -329,7 +335,7 @@ function renderApp(contacts) {
     <div id="resultsContainer"></div>
   </main>
 
-  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity duration-200">
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-2xl opacity-0 pointer-events-none transition-opacity duration-200 z-50 border border-slate-700">
     Extensión copiada al portapapeles
   </div>
 
@@ -368,7 +374,7 @@ function renderApp(contacts) {
 
     function copyExt(ext) {
       navigator.clipboard.writeText(ext).then(() => {
-        toast.textContent = "Extensión " + ext + " copiada";
+        toast.textContent = "¡Extensión " + ext + " copiada!";
         toast.classList.remove("opacity-0");
         setTimeout(() => toast.classList.add("opacity-0"), 1800);
       });
@@ -426,16 +432,16 @@ function renderApp(contacts) {
                   <th class="py-3 px-4 font-semibold text-right">Acción</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100 text-sm">
+              <tbody class="divide-y divide-slate-100 text-sm sm:text-base">
                 \${filtered.map((c) => \`
                   <tr class="hover:bg-slate-50/80 transition-colors">
-                    <td class="py-3 px-4 font-mono font-bold text-blue-600">\${escapeClient(c.extension)}</td>
-                    <td class="py-3 px-4 font-medium text-slate-900">\${escapeClient(c.name)}</td>
-                    <td class="py-3 px-4 text-slate-500 hidden sm:table-cell">\${escapeClient(c.location)}</td>
-                    <td class="py-3 px-4 text-right">
-                      <div class="inline-flex items-center gap-1.5">
-                        <a href="tel:\${escapeClient(c.extension)}" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1 rounded-lg">Llamar</a>
-                        <button onclick="copyExt('\${escapeClient(c.extension)}')" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200">📋</button>
+                    <td class="py-3.5 px-4 font-mono font-extrabold text-blue-600 text-base sm:text-lg">\${escapeClient(c.extension)}</td>
+                    <td class="py-3.5 px-4 font-bold text-slate-900 text-base sm:text-lg">\${escapeClient(c.name)}</td>
+                    <td class="py-3.5 px-4 text-slate-500 hidden sm:table-cell text-sm">\${escapeClient(c.location)}</td>
+                    <td class="py-3.5 px-4 text-right">
+                      <div class="inline-flex items-center gap-2">
+                        <a href="tel:\${escapeClient(c.extension)}" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm">Llamar</a>
+                        <button onclick="copyExt('\${escapeClient(c.extension)}')" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">📋</button>
                       </div>
                     </td>
                   </tr>\`).join("")}
@@ -444,7 +450,7 @@ function renderApp(contacts) {
           </div>\`;
       } else {
         resultsContainer.innerHTML = \`
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             \${filtered.map((c) => {
               const badgeStyle = c.isQueue
                 ? "bg-amber-100 text-amber-800 border-amber-200"
@@ -452,59 +458,13 @@ function renderApp(contacts) {
                   ? "bg-slate-100 text-slate-600 border-slate-200"
                   : "bg-indigo-50 text-indigo-700 border-indigo-200";
 
-              const cardBorder = c.isQueue ? "border-amber-200/80 bg-amber-50/30" : "border-slate-200 bg-white";
+              const cardBorder = c.isQueue ? "border-amber-300/80 bg-amber-50/20" : "border-slate-200 bg-white";
 
               return \`
-                <div class="\${cardBorder} rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3">
+                <div class="\${cardBorder} rounded-2xl border p-4 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3">
                   <div>
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                      <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md border \${badgeStyle}">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                      <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-md border \${badgeStyle}">
                         \${c.isQueue ? "★ Cola Principal" : escapeClient(c.location)}
                       </span>
-                      <span class="text-xs text-slate-400 font-medium">\${escapeClient(c.department)}</span>
-                    </div>
-                    <h2 class="font-bold text-slate-900 text-base leading-snug">\${escapeClient(c.name)}</h2>
-                  </div>
-
-                  <div class="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <span class="font-mono text-xs text-slate-500">Ext: <strong class="text-slate-800">\${escapeClient(c.extension)}</strong></span>
-                    <div class="flex items-center gap-2">
-                      <a href="tel:\${escapeClient(c.extension)}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition-colors">
-                        Llamar
-                      </a>
-                      <button onclick="copyExt('\${escapeClient(c.extension)}')" title="Copiar extensión" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">
-                        📋
-                      </button>
-                    </div>
-                  </div>
-                </div>\`;
-            }).join("")}
-          </div>\`;
-      }
-    }
-
-    function escapeClient(str) {
-      return String(str)
-        .replace(/&/g, "&")
-        .replace(/</g, "<")
-        .replace(/>/g, ">")
-        .replace(/"/g, '"');
-    }
-
-    searchInput.addEventListener("input", renderList);
-    locationFilter.addEventListener("change", renderList);
-    deptFilter.addEventListener("change", renderList);
-    clearSearch.addEventListener("click", () => {
-      searchInput.value = "";
-      renderList();
-      searchInput.focus();
-    });
-
-    searchInput.value = "";
-    locationFilter.value = "";
-    deptFilter.value = "";
-    renderList();
-  </script>
-</body>
-</html>`;
-}
+                      <span class="text-xs text-slate-
