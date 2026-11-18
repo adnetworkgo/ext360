@@ -53,9 +53,6 @@ export default {
   },
 };
 
-/**
- * Valida IPv4, IPv6 exactas y subredes CIDR
- */
 function isIPAllowed(clientIP, allowedList) {
   if (!clientIP || allowedList.length === 0) return false;
 
@@ -107,7 +104,7 @@ function matchCIDRv6(ip, cidr) {
 }
 
 /**
- * Parsea el XML y extrae Nombre, Ubicación (ej. Calabozo) y Departamento.
+ * Parser robusto: detecta automáticamente cualquier etiqueta raíz del XML
  */
 function parseAndSortContacts(xmlText) {
   const parser = new XMLParser({
@@ -116,7 +113,15 @@ function parseAndSortContacts(xmlText) {
   });
 
   const parsed = parser.parse(xmlText);
-  let rawContacts = parsed?.AddressBook?.Contact || [];
+  let rawContacts = [];
+
+  if (parsed) {
+    const rootKey = Object.keys(parsed)[0];
+    if (rootKey && parsed[rootKey]) {
+      rawContacts = parsed[rootKey].Contact || parsed[rootKey].contact || [];
+    }
+  }
+
   if (!Array.isArray(rawContacts)) {
     rawContacts = [rawContacts];
   }
@@ -125,15 +130,16 @@ function parseAndSortContacts(xmlText) {
 
   const contacts = rawContacts
     .map((c) => {
-      const rawName = String(c.FirstName || "").trim();
-      const rawLast = String(c.LastName || "").trim();
+      const rawName = String(c.FirstName || c.firstname || "").trim();
+      const rawLast = String(c.LastName || c.lastname || "").trim();
       const fullName = rawLast ? `${rawName} ${rawLast}`.trim() : rawName;
 
+      let phoneNode = c.Phone || c.phone;
       let extension = "";
-      if (Array.isArray(c.Phone)) {
-        extension = String(c.Phone[0]?.phonenumber || "").trim();
-      } else if (c.Phone) {
-        extension = String(c.Phone.phonenumber || "").trim();
+      if (Array.isArray(phoneNode)) {
+        extension = String(phoneNode[0]?.phonenumber || phoneNode[0]?.number || "").trim();
+      } else if (phoneNode) {
+        extension = String(phoneNode.phonenumber || phoneNode.number || "").trim();
       }
 
       if (!fullName || !extension) return null;
@@ -151,29 +157,24 @@ function parseAndSortContacts(xmlText) {
         };
       }
 
-      // 2. Procesar nombres regulares (ej: Steffany Marante Calabozo Cobranza Pyme o Rosa Castillo Calabozo)
       const parts = fullName.split(/\s+/);
       let personName = fullName;
       let location = "General";
       let department = "General";
 
       if (parts.length >= 3) {
-        // Asumimos primeros 2 términos como Nombre y Apellido
         personName = `${parts[0]} ${parts[1]}`;
         const thirdTerm = parts[2];
         const restOfText = parts.slice(3).join(" ");
 
-        // Verificar si el tercer término es una ubicación conocida o un código L#
         if (knownLocations.includes(thirdTerm.toLowerCase()) || /^L\d+$/i.test(thirdTerm)) {
           location = capitalizeWords(thirdTerm);
           department = restOfText ? capitalizeWords(restOfText) : "General";
         } else {
-          // Si el tercer término no es ubicación evidente, evaluamos si el nombre tiene otra estructura
           location = capitalizeWords(thirdTerm);
           department = restOfText ? capitalizeWords(restOfText) : "General";
         }
       } else if (parts.length === 2) {
-        // Ej: Rosa Castillo (asumimos sin ubicación explícita o la ubicamos en General)
         personName = fullName;
         location = "General";
         department = "General";
@@ -389,13 +390,10 @@ function renderApp(contacts) {
         return haystack.includes(q);
       });
 
-      // Ordenamiento dinámico según el modo de vista
       filtered.sort((a, b) => {
         if (isMinimalView) {
-          // Orden puramente alfabético por nombre o extensión
           return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
         } else {
-          // Orden por jerarquía: Principales primero, luego por ubicación y departamento
           if (a.isQueue && !b.isQueue) return -1;
           if (!a.isQueue && b.isQueue) return 1;
           if (a.location !== b.location) return a.location.localeCompare(b.location, "es");
@@ -415,7 +413,6 @@ function renderApp(contacts) {
       }
 
       if (isMinimalView) {
-        // --- VISTA MINIMALISTA ---
         resultsContainer.innerHTML = \`
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <table class="w-full text-left border-collapse">
@@ -444,7 +441,6 @@ function renderApp(contacts) {
             </table>
           </div>\`;
       } else {
-        // --- VISTA DE TARJETAS ---
         resultsContainer.innerHTML = \`
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             \${filtered.map((c) => {
@@ -490,7 +486,7 @@ function renderApp(contacts) {
         .replace(/&/g, "&")
         .replace(/</g, "<")
         .replace(/>/g, ">")
-        .replace(/"/g, """);
+        .replace(/"/g, '"');
     }
 
     searchInput.addEventListener("input", renderList);
@@ -502,6 +498,10 @@ function renderApp(contacts) {
       searchInput.focus();
     });
 
+    // Inicializar vacíos y renderizar
+    searchInput.value = "";
+    locationFilter.value = "";
+    deptFilter.value = "";
     renderList();
   </script>
 </body>
