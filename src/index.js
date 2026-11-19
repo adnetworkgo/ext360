@@ -269,8 +269,12 @@ function renderApp(contacts) {
   <header class="text-white shadow-lg sticky top-0 z-20" style="background-color: #001457; border-bottom: 2px solid #00C600;">
     <div class="max-w-4xl mx-auto px-4 py-3.5 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-11 h-11 bg-blue-600/30 rounded-xl flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
-          ${logoUrlClean ? `<img src="${logoUrlClean}" alt="Logo" class="w-full h-full object-contain" />` : `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`}
+      <div class="h-10 sm:h-12 flex items-center justify-center shrink-0">
+          ${
+            logoUrlClean
+              ? `<img src="${logoUrlClean}" alt="Logo 360 NET" class="h-full w-auto object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="w-11 h-11 bg-blue-600/30 rounded-xl items-center justify-center border border-white/10" style="display:none;"><svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></div>`
+              : `<div class="w-11 h-11 bg-blue-600/30 rounded-xl flex items-center justify-center border border-white/10"><svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></div>`
+          }
         </div>
         <div>
           <h1 class="font-bold text-base sm:text-lg leading-tight text-white">Directorio Telefónico Corporativo</h1>
