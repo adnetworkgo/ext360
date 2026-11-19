@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 
 const XML_SOURCE_URL = "https://360net-publico.s3.amazonaws.com/phonebook.xml";
-const LOGO_URL = "https://github.com/adnetworkgo/ext360/blob/main/logo360.webp"; // Opcional: Coloca aquí la URL directa de tu logo PNG
+const LOGO_URL = "https://github.com/adnetworkgo/ext360/blob/main/logo360.png"; // Opcional: Coloca aquí la URL directa de tu logo PNG
 
 export default {
   async fetch(request, env, ctx) {
